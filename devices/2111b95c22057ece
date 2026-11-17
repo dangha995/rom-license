@@ -1,0 +1,10 @@
+{
+  "status": false,
+  "expired": true,
+  "expire_date": "2027-01-16",
+  "is_locked": 1,
+  "message": "Thiết bị đã bị tạm khóa bởi quản trị viên!",
+  "customer_name": "ha",
+  "note": "jjj",
+  "sn": "2111b95c22057ece"
+}
