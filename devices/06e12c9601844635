@@ -1,0 +1,10 @@
+{
+  "status" : true,
+  "expired" : false,
+  "is_locked" : 1,
+  "customer_name" : "Khách iPhone (Chờ duyệt)",
+  "note" : "Litmatch iOS",
+  "message" : "Đang chờ Admin duyệt kích hoạt...",
+  "sn" : "06e12c9601844635",
+  "expire_date" : "2027-01-01"
+}
