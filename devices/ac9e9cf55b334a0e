@@ -1,10 +1,10 @@
 {
-  "status" : true,
-  "expired" : false,
-  "is_locked" : 1,
-  "customer_name" : "Khách iPhone (Chờ duyệt)",
-  "note" : "Litmatch iOS",
-  "message" : "Đang chờ Admin duyệt kích hoạt...",
-  "sn" : "ac9e9cf55b334a0e",
-  "expire_date" : "2027-01-01"
+  "status": true,
+  "expired": false,
+  "expire_date": "2027-01-01",
+  "is_locked": 0,
+  "message": "Bản quyền hợp lệ",
+  "customer_name": "Khách iPhone (Chờ duyệt)",
+  "note": "Litmatch iOS",
+  "sn": "ac9e9cf55b334a0e"
 }
