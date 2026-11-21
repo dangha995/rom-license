@@ -1,10 +1,10 @@
 {
-  "status": false,
+  "status": true,
   "expired": false,
   "expire_date": "2026-11-22",
-  "is_locked": 1,
-  "message": "\u0110ang ch\u1edd Admin k\u00edch ho\u1ea1t...",
-  "customer_name": "Kh\u00e1ch m\u1edbi (Ch\u1edd k\u00edch ho\u1ea1t)",
+  "is_locked": 0,
+  "message": "Bản quyền hợp lệ",
+  "customer_name": "Khách mới (Chờ kích hoạt)",
   "note": "Litmatch iOS",
   "sn": "8cc6cef46db148ed"
 }
