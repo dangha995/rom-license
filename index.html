@@ -581,11 +581,11 @@
       updateStats(allDevices);
       filterDevices();
 
-      // Đồng bộ đồng loạt lên GitHub REST API
+      // Đồng bộ tuần tự an toàn lên GitHub REST API (tránh xung đột Git 409 Conflict)
       let successCount = 0;
       let failCount = 0;
 
-      await Promise.all(targets.map(async dev => {
+      for (const dev of targets) {
         const sn = dev.sn || dev._filename;
         const updatedData = {
           status: targetLockedState === 0,
@@ -606,7 +606,12 @@
           console.error(`Lỗi khi batch ${actionName} ${sn}:`, err);
           failCount++;
         }
-      }));
+
+        // Nghỉ nhẹ 300ms giữa mỗi máy để GitHub xử lý tuần tự commit Git sạch sẽ
+        if (targets.length > 1) {
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
 
       if (btn) {
         btn.disabled = false;
@@ -748,7 +753,7 @@
       }
     }
 
-    // Helper gọi GitHub API PUT
+    // Helper gọi GitHub API PUT (Có cơ chế tự động lấy SHA mới và Retry khi dính 409 Conflict)
     async function uploadFileToGitHub(filename, jsonContent, sha = null, commitMsg = "Update device") {
       const token = getStoredToken();
       const contentStr = JSON.stringify(jsonContent, null, 2);
@@ -764,7 +769,7 @@
       }
       
       const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/devices/${filename}`;
-      const res = await fetch(url, {
+      let res = await fetch(url, {
         method: 'PUT',
         headers: {
           'Authorization': `token ${token}`,
@@ -773,6 +778,35 @@
         },
         body: JSON.stringify(payload)
       });
+      
+      // Tự động khôi phục khi bị 409 Conflict (SHA cũ hoặc race condition)
+      if (res.status === 409) {
+        try {
+          await new Promise(r => setTimeout(r, 350));
+          const freshRes = await fetch(`${url}?ref=${GITHUB_BRANCH}&_t=${Date.now()}`, {
+            headers: {
+              'Authorization': `token ${token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            cache: 'no-store'
+          });
+          if (freshRes.ok) {
+            const freshData = await freshRes.json();
+            payload.sha = freshData.sha;
+            res = await fetch(url, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(payload)
+            });
+          }
+        } catch (retryErr) {
+          console.warn('Lỗi auto-retry 409:', retryErr);
+        }
+      }
       
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
