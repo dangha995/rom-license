@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KazeLAB License Manager - Quản Lý Bản Quyền</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cyber-glow {
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
+    }
+    .cyber-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.7);
+    }
+    .cyber-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+  <!-- Top Navbar -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white font-black text-xl">
+          K
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold text-white tracking-wide">KazeLAB License</h1>
+            <span class="text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">GitHub Sync</span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono">dangha995/rom-license</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button onclick="refreshData()" class="p-2 sm:px-3 sm:py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5" title="Làm mới dữ liệu">
+          <i id="refresh-icon" class="fa-solid fa-arrows-rotate"></i>
+          <span class="hidden sm:inline">Làm mới</span>
+        </button>
+        <button onclick="openTokenModal()" class="p-2 sm:px-3 sm:py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 transition flex items-center gap-1.5" title="Cài đặt GitHub Token">
+          <i class="fa-solid fa-key"></i>
+          <span class="hidden sm:inline" id="token-status-text">Cài Token</span>
+        </button>
+        <button onclick="openAddModal()" class="px-3 py-2 text-xs font-bold rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-lg shadow-cyan-500/25 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-plus"></i>
+          <span>Thêm Khách</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div class="cyber-card p-4 rounded-xl border">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-1">
+          <span>Tổng thiết bị</span>
+          <i class="fa-solid fa-mobile-screen text-slate-500"></i>
+        </div>
+        <div id="stat-total" class="text-2xl sm:text-3xl font-bold text-white font-mono">0</div>
+      </div>
+      <div class="cyber-card p-4 rounded-xl border border-emerald-500/20 bg-emerald-950/10">
+        <div class="flex items-center justify-between text-emerald-400 text-xs font-medium mb-1">
+          <span>Đang hoạt động</span>
+          <i class="fa-solid fa-circle-check text-emerald-500"></i>
+        </div>
+        <div id="stat-active" class="text-2xl sm:text-3xl font-bold text-emerald-400 font-mono">0</div>
+      </div>
+      <div class="cyber-card p-4 rounded-xl border border-rose-500/20 bg-rose-950/10">
+        <div class="flex items-center justify-between text-rose-400 text-xs font-medium mb-1">
+          <span>Đã bị khóa</span>
+          <i class="fa-solid fa-lock text-rose-500"></i>
+        </div>
+        <div id="stat-locked" class="text-2xl sm:text-3xl font-bold text-rose-400 font-mono">0</div>
+      </div>
+      <div class="cyber-card p-4 rounded-xl border border-amber-500/20 bg-amber-950/10">
+        <div class="flex items-center justify-between text-amber-400 text-xs font-medium mb-1">
+          <span>Hết hạn</span>
+          <i class="fa-solid fa-clock text-amber-500"></i>
+        </div>
+        <div id="stat-expired" class="text-2xl sm:text-3xl font-bold text-amber-400 font-mono">0</div>
+      </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="cyber-card p-3 sm:p-4 rounded-xl flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div class="relative w-full sm:w-80">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+        <input type="text" id="search-input" oninput="filterDevices()" placeholder="Tìm theo tên khách, mã SN, ghi chú..." 
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
+      </div>
+      <div class="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+        <button onclick="setFilter('all')" id="filter-all" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 transition">Tất cả</button>
+        <button onclick="setFilter('active')" id="filter-active" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition">Hoạt động</button>
+        <button onclick="setFilter('locked')" id="filter-locked" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition">Đã khóa</button>
+        <button onclick="setFilter('expired')" id="filter-expired" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition">Hết hạn</button>
+      </div>
+    </div>
+
+    <!-- Devices List -->
+    <div id="device-container" class="space-y-3">
+      <!-- Loading State -->
+      <div id="loading-state" class="py-16 text-center">
+        <i class="fa-solid fa-circle-notch fa-spin text-3xl text-cyan-500 mb-3"></i>
+        <p class="text-sm text-slate-400">Đang tải danh sách thiết bị từ GitHub...</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: Thêm Thiết Bị Mới -->
+  <div id="modal-add" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="cyber-card w-full max-w-lg rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-user-plus text-sm"></i>
+          </div>
+          <h2 class="text-lg font-bold text-white">Thêm Khách Thuê Mới</h2>
+        </div>
+        <button onclick="closeAddModal()" class="text-slate-400 hover:text-white transition text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="form-add-device" onsubmit="submitAddDevice(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Mã máy thiết bị (SN) <span class="text-rose-400">*</span></label>
+          <div class="relative">
+            <input type="text" id="add-sn" required placeholder="Nhập hoặc dán 16 ký tự mã máy khách gửi"
+                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+            <button type="button" onclick="pasteSN()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2 py-1 rounded border border-slate-700">Dán</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Tên khách hàng</label>
+            <input type="text" id="add-name" placeholder="Ví dụ: Anh Hoàng Zalo"
+                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Ghi chú gói</label>
+            <input type="text" id="add-note" value="Litmatch AutoChest" placeholder="Ghi chú thêm"
+                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Hạn sử dụng</label>
+          <div class="grid grid-cols-4 gap-2 mb-2">
+            <button type="button" onclick="setExpireDays(1)" class="px-2 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-slate-300">+1 ngày</button>
+            <button type="button" onclick="setExpireDays(7)" class="px-2 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-slate-300">+7 ngày</button>
+            <button type="button" onclick="setExpireDays(30)" class="px-2 py-1.5 text-xs bg-cyan-950 border border-cyan-500/40 rounded text-cyan-300 font-semibold">+30 ngày</button>
+            <button type="button" onclick="setExpireDays(365)" class="px-2 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-slate-300">+1 năm</button>
+          </div>
+          <input type="date" id="add-expire" required
+                 class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeAddModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition">Hủy</button>
+          <button type="submit" id="btn-submit-add" class="px-5 py-2.5 text-xs font-bold rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-lg shadow-cyan-500/20 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-check"></i>
+            <span>Kích Hoạt Ngay</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Cài Đặt Token GitHub -->
+  <div id="modal-token" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="cyber-card w-full max-w-md rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-key text-sm"></i>
+          </div>
+          <h2 class="text-lg font-bold text-white">GitHub Access Token</h2>
+        </div>
+        <button onclick="closeTokenModal()" class="text-slate-400 hover:text-white transition text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Token này giúp trang web có quyền <b class="text-cyan-400">thêm, sửa, khóa, mở khóa</b> trực tiếp vào repo <code class="text-slate-200 bg-slate-800 px-1.5 py-0.5 rounded font-mono">dangha995/rom-license</code>.
+        </p>
+
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-1">
+          <p class="font-semibold text-slate-300">Cách lấy Token trong 30 giây:</p>
+          <p>1. Mở GitHub ➔ Vào <b>Settings</b> ➔ <b>Developer Settings</b></p>
+          <p>2. Chọn <b>Personal Access Tokens (classic)</b> ➔ <b>Generate new token</b></p>
+          <p>3. Đặt tên (vd: "LicenseWeb") và tích chọn quyền <span class="text-cyan-400 font-mono font-semibold">repo</span></p>
+          <p>4. Bấm Generate và copy mã token (dạng <code class="text-slate-300">ghp_xxxx</code>) dán vào đây.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">GitHub Personal Access Token</label>
+          <input type="password" id="input-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeTokenModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition">Đóng</button>
+          <button type="button" onclick="saveToken()" class="px-5 py-2 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition">Lưu Token</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div id="toast-inner" class="px-4 py-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-2xl backdrop-blur">
+      <i id="toast-icon" class="fa-solid fa-circle-check"></i>
+      <span id="toast-text">Thông báo</span>
+    </div>
+  </div>
+
+  <script>
+    const REPO_OWNER = 'dangha995';
+    const REPO_NAME = 'rom-license';
+    const DEVICES_PATH = 'devices';
+
+    let allDevices = [];
+    let currentFilter = 'all';
+
+    // Khởi động
+    document.addEventListener('DOMContentLoaded', () => {
+      checkTokenState();
+      setExpireDays(30); // Default 30 days
+      refreshData();
+    });
+
+    function getStoredToken() {
+      return localStorage.getItem('gh_license_token') || '';
+    }
+
+    function checkTokenState() {
+      const token = getStoredToken();
+      const statusText = document.getElementById('token-status-text');
+      if (token) {
+        statusText.innerText = 'Đã có Token';
+        statusText.classList.remove('text-cyan-400');
+        statusText.classList.add('text-emerald-400');
+      } else {
+        statusText.innerText = 'Chưa có Token';
+        statusText.classList.remove('text-emerald-400');
+        statusText.classList.add('text-cyan-400');
+      }
+    }
+
+    function openTokenModal() {
+      document.getElementById('input-token').value = getStoredToken();
+      document.getElementById('modal-token').classList.remove('hidden');
+    }
+
+    function closeTokenModal() {
+      document.getElementById('modal-token').classList.add('hidden');
+    }
+
+    function saveToken() {
+      const val = document.getElementById('input-token').value.trim();
+      if (!val) {
+        localStorage.removeItem('gh_license_token');
+        showToast('Đã xóa Token.', 'info');
+      } else {
+        localStorage.setItem('gh_license_token', val);
+        showToast('Đã lưu Token thành công!', 'success');
+      }
+      checkTokenState();
+      closeTokenModal();
+      refreshData();
+    }
+
+    function openAddModal() {
+      document.getElementById('add-sn').value = '';
+      document.getElementById('add-name').value = '';
+      setExpireDays(30);
+      document.getElementById('modal-add').classList.remove('hidden');
+      document.getElementById('add-sn').focus();
+    }
+
+    function closeAddModal() {
+      document.getElementById('modal-add').classList.add('hidden');
+    }
+
+    async function pasteSN() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('add-sn').value = text.trim();
+          showToast('Đã dán từ clipboard!', 'info');
+        }
+      } catch (e) {
+        showToast('Vui lòng cấp quyền clipboard hoặc dán thủ công.', 'error');
+      }
+    }
+
+    function setExpireDays(days) {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      document.getElementById('add-expire').value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    function getHeaders() {
+      const token = getStoredToken();
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+      if (token) {
+        headers['Authorization'] = `token ${token}`;
+      }
+      return headers;
+    }
+
+    // Tải danh sách thiết bị từ GitHub API
+    async function refreshData() {
+      const icon = document.getElementById('refresh-icon');
+      icon.classList.add('fa-spin');
+      
+      const container = document.getElementById('device-container');
+      
+      try {
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_PATH}?t=${Date.now()}`;
+        const res = await fetch(url, { headers: getHeaders() });
+        
+        if (res.status === 404) {
+          container.innerHTML = `<div class="p-8 text-center text-slate-400">Thư mục devices chưa có file nào. Hãy bấm "Thêm Khách" để tạo thiết bị đầu tiên!</div>`;
+          updateStats([]);
+          return;
+        }
+        
+        if (!res.ok) {
+          throw new Error(`GitHub API phản hồi: ${res.status} ${res.statusText}`);
+        }
+        
+        const files = await res.json();
+        const deviceFiles = files.filter(f => f.type === 'file');
+        
+        // Tải nội dung từng file song song
+        const fetchPromises = deviceFiles.map(async (file) => {
+          try {
+            const rawRes = await fetch(file.download_url + `?t=${Date.now()}`);
+            if (!rawRes.ok) return null;
+            const json = await rawRes.json();
+            return {
+              ...json,
+              _sha: file.sha,
+              _filename: file.name
+            };
+          } catch (e) {
+            return null;
+          }
+        });
+        
+        const results = await Promise.all(fetchPromises);
+        allDevices = results.filter(d => d !== null);
+        
+        updateStats(allDevices);
+        renderDevices(allDevices);
+        showToast('Đồng bộ dữ liệu thành công!', 'success');
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `
+          <div class="cyber-card p-6 rounded-xl border border-rose-500/30 text-center space-y-3">
+            <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-400"></i>
+            <p class="text-sm text-slate-200 font-semibold">${err.message}</p>
+            <p class="text-xs text-slate-400">Nếu bạn bị giới hạn API hoặc repo riêng tư, hãy bấm "Cài Token" ở góc trên để nhập GitHub Token.</p>
+            <button onclick="openTokenModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/40 rounded-lg text-xs font-semibold">Cài GitHub Token ngay</button>
+          </div>
+        `;
+      } finally {
+        icon.classList.remove('fa-spin');
+      }
+    }
+
+    function updateStats(devices) {
+      const today = new Date().toISOString().split('T')[0];
+      
+      let active = 0;
+      let locked = 0;
+      let expired = 0;
+      
+      devices.forEach(d => {
+        const isLock = d.is_locked === 1 || d.is_locked === '1' || d.is_locked === true;
+        const isExp = d.expired === true || (d.expire_date && d.expire_date < today);
+        const isStat = d.status === true || d.status === 'true' || d.status === 1;
+        
+        if (isLock) {
+          locked++;
+        } else if (isExp || !isStat) {
+          expired++;
+        } else {
+          active++;
+        }
+      });
+      
+      document.getElementById('stat-total').innerText = devices.length;
+      document.getElementById('stat-active').innerText = active;
+      document.getElementById('stat-locked').innerText = locked;
+      document.getElementById('stat-expired').innerText = expired;
+    }
+
+    function renderDevices(devices) {
+      const container = document.getElementById('device-container');
+      
+      if (!devices || devices.length === 0) {
+        container.innerHTML = `
+          <div class="cyber-card p-12 text-center rounded-xl border border-dashed border-slate-700">
+            <i class="fa-regular fa-folder-open text-4xl text-slate-600 mb-3"></i>
+            <p class="text-sm font-semibold text-slate-300">Không tìm thấy thiết bị nào</p>
+            <p class="text-xs text-slate-500 mt-1">Bấm "Thêm Khách" để thêm máy thuê mới vào hệ thống.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      container.innerHTML = devices.map(d => {
+        const sn = d.sn || d._filename;
+        const name = d.customer_name || 'Khách chưa đặt tên';
+        const note = d.note || 'Litmatch AutoChest';
+        const expDate = d.expire_date || 'Không giới hạn';
+        
+        const isLocked = d.is_locked === 1 || d.is_locked === '1' || d.is_locked === true;
+        const isExpired = d.expired === true || (d.expire_date && d.expire_date < today);
+        const isStatusOk = d.status === true || d.status === 'true' || d.status === 1;
+        
+        let statusBadge = '';
+        if (isLocked) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-1.5"><i class="fa-solid fa-lock text-[10px]"></i> ĐÃ KHÓA</span>`;
+        } else if (isExpired || !isStatusOk) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5"><i class="fa-solid fa-clock text-[10px]"></i> HẾT HẠN</span>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-[10px]"></i> HOẠT ĐỘNG</span>`;
+        }
+        
+        // Tính số ngày còn lại
+        let daysLeftText = '';
+        if (d.expire_date) {
+          const diffTime = new Date(d.expire_date) - new Date(today);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays > 0) {
+            daysLeftText = `<span class="text-xs text-emerald-400 font-semibold">(Còn ${diffDays} ngày)</span>`;
+          } else if (diffDays === 0) {
+            daysLeftText = `<span class="text-xs text-amber-400 font-semibold">(Hết hạn hôm nay)</span>`;
+          } else {
+            daysLeftText = `<span class="text-xs text-rose-400 font-semibold">(Đã quá hạn ${Math.abs(diffDays)} ngày)</span>`;
+          }
+        }
+        
+        return `
+          <div class="cyber-card p-4 sm:p-5 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="space-y-1.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-sm sm:text-base font-bold text-white">${escapeHtml(name)}</span>
+                ${statusBadge}
+                <span class="text-xs text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/60">${escapeHtml(note)}</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs font-mono text-cyan-300">
+                <i class="fa-solid fa-mobile-screen-button text-slate-500"></i>
+                <span class="font-bold">${sn}</span>
+                <button onclick="copyToClipboard('${sn}')" class="text-slate-400 hover:text-cyan-400 transition" title="Sao chép SN">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+              <div class="text-xs text-slate-400 flex items-center gap-2">
+                <i class="fa-regular fa-calendar-days text-slate-500"></i>
+                <span>Hạn dùng: <b class="text-slate-200 font-mono">${expDate}</b> ${daysLeftText}</span>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+              ${isLocked 
+                ? `<button onclick="toggleLock('${sn}', 0)" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40 transition flex items-center gap-1.5">
+                     <i class="fa-solid fa-lock-open"></i> Mở Khóa
+                   </button>`
+                : `<button onclick="toggleLock('${sn}', 1)" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/40 transition flex items-center gap-1.5">
+                     <i class="fa-solid fa-lock"></i> Khóa Ngay
+                   </button>`
+              }
+              <button onclick="extendDays('${sn}', 30)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition flex items-center gap-1.5" title="Gia hạn thêm 30 ngày">
+                <i class="fa-solid fa-calendar-plus"></i> +30 Ngày
+              </button>
+              <button onclick="deleteDevice('${sn}')" class="p-2 rounded-lg text-xs text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 border border-transparent hover:border-rose-500/30 transition" title="Xóa thiết bị này">
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('bg-cyan-500', 'text-slate-950');
+        btn.classList.add('bg-slate-800', 'text-slate-400');
+      });
+      const activeBtn = document.getElementById(`filter-${filter}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-800', 'text-slate-400');
+        activeBtn.classList.add('bg-cyan-500', 'text-slate-950');
+      }
+      filterDevices();
+    }
+
+    function filterDevices() {
+      const query = document.getElementById('search-input').value.toLowerCase().trim();
+      const today = new Date().toISOString().split('T')[0];
+      
+      const filtered = allDevices.filter(d => {
+        const sn = (d.sn || d._filename || '').toLowerCase();
+        const name = (d.customer_name || '').toLowerCase();
+        const note = (d.note || '').toLowerCase();
+        
+        const matchQuery = !query || sn.includes(query) || name.includes(query) || note.includes(query);
+        if (!matchQuery) return false;
+        
+        const isLocked = d.is_locked === 1 || d.is_locked === '1' || d.is_locked === true;
+        const isExpired = d.expired === true || (d.expire_date && d.expire_date < today);
+        const isStatusOk = d.status === true || d.status === 'true' || d.status === 1;
+        
+        if (currentFilter === 'active') return !isLocked && !isExpired && isStatusOk;
+        if (currentFilter === 'locked') return isLocked;
+        if (currentFilter === 'expired') return isExpired || !isStatusOk;
+        return true;
+      });
+      
+      renderDevices(filtered);
+    }
+
+    // Toggle Khóa / Mở Khóa thiết bị
+    async function toggleLock(sn, targetLockedState) {
+      const token = getStoredToken();
+      if (!token) {
+        showToast('Vui lòng cài đặt GitHub Token trước khi thao tác!', 'error');
+        openTokenModal();
+        return;
+      }
+      
+      const dev = allDevices.find(d => (d.sn || d._filename) === sn);
+      if (!dev) return;
+      
+      const actionName = targetLockedState === 1 ? 'Khóa' : 'Mở Khóa';
+      showToast(`Đang ${actionName} thiết bị ${sn}...`, 'info');
+      
+      const updatedData = {
+        status: targetLockedState === 1 ? dev.status : true,
+        expired: targetLockedState === 1 ? dev.expired : false,
+        expire_date: dev.expire_date || '2027-01-01',
+        is_locked: targetLockedState,
+        message: targetLockedState === 1 ? "Thiết bị đã bị khóa từ xa" : "Bản quyền hợp lệ",
+        customer_name: dev.customer_name || "Khách",
+        note: dev.note || "Litmatch AutoChest",
+        sn: sn
+      };
+      
+      try {
+        await uploadFileToGitHub(sn, updatedData, dev._sha, `Sync device ${sn} [locked: ${targetLockedState}]`);
+        showToast(`Đã ${actionName} thành công thiết bị ${sn}!`, 'success');
+        refreshData();
+      } catch (err) {
+        showToast(`Lỗi khi ${actionName}: ${err.message}`, 'error');
+      }
+    }
+
+    // Gia hạn thêm ngày
+    async function extendDays(sn, days) {
+      const token = getStoredToken();
+      if (!token) {
+        showToast('Vui lòng cài đặt GitHub Token trước!', 'error');
+        openTokenModal();
+        return;
+      }
+      
+      const dev = allDevices.find(d => (d.sn || d._filename) === sn);
+      if (!dev) return;
+      
+      const today = new Date().toISOString().split('T')[0];
+      let baseDate = new Date();
+      if (dev.expire_date && dev.expire_date > today) {
+        baseDate = new Date(dev.expire_date);
+      }
+      baseDate.setDate(baseDate.getDate() + days);
+      const newExpireStr = baseDate.toISOString().split('T')[0];
+      
+      const updatedData = {
+        ...dev,
+        status: true,
+        expired: false,
+        is_locked: 0,
+        expire_date: newExpireStr,
+        message: "Bản quyền hợp lệ"
+      };
+      delete updatedData._sha;
+      delete updatedData._filename;
+      
+      showToast(`Đang gia hạn ${sn} đến ${newExpireStr}...`, 'info');
+      
+      try {
+        await uploadFileToGitHub(sn, updatedData, dev._sha, `Extend device ${sn} to ${newExpireStr}`);
+        showToast(`Đã gia hạn thành công đến ngày ${newExpireStr}!`, 'success');
+        refreshData();
+      } catch (err) {
+        showToast(`Lỗi gia hạn: ${err.message}`, 'error');
+      }
+    }
+
+    // Xóa thiết bị
+    async function deleteDevice(sn) {
+      const token = getStoredToken();
+      if (!token) {
+        showToast('Vui lòng cài đặt GitHub Token trước!', 'error');
+        openTokenModal();
+        return;
+      }
+      
+      if (!confirm(`Bạn có chắc chắn muốn xóa thiết bị ${sn} khỏi hệ thống không?`)) {
+        return;
+      }
+      
+      const dev = allDevices.find(d => (d.sn || d._filename) === sn);
+      if (!dev) return;
+      
+      showToast(`Đang xóa thiết bị ${sn}...`, 'info');
+      
+      try {
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_PATH}/${sn}`;
+        const res = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            ...getHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: `Delete device ${sn}`,
+            sha: dev._sha
+          })
+        });
+        
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || res.statusText);
+        }
+        
+        showToast(`Đã xóa thiết bị ${sn} thành công!`, 'success');
+        refreshData();
+      } catch (err) {
+        showToast(`Lỗi khi xóa: ${err.message}`, 'error');
+      }
+    }
+
+    // Thêm khách hàng mới
+    async function submitAddDevice(e) {
+      e.preventDefault();
+      
+      const token = getStoredToken();
+      if (!token) {
+        showToast('Vui lòng cài đặt GitHub Token trước khi thêm khách!', 'error');
+        openTokenModal();
+        return;
+      }
+      
+      const sn = document.getElementById('add-sn').value.trim();
+      const name = document.getElementById('add-name').value.trim() || 'Khách mới';
+      const note = document.getElementById('add-note').value.trim() || 'Litmatch AutoChest';
+      const expire = document.getElementById('add-expire').value;
+      
+      if (!sn) {
+        showToast('Vui lòng nhập mã máy SN!', 'error');
+        return;
+      }
+      
+      const submitBtn = document.getElementById('btn-submit-add');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang kích hoạt...`;
+      
+      // Kiểm tra xem thiết bị đã tồn tại chưa để lấy SHA
+      const existing = allDevices.find(d => (d.sn || d._filename) === sn);
+      const sha = existing ? existing._sha : undefined;
+      
+      const payload = {
+        status: true,
+        expired: false,
+        expire_date: expire,
+        is_locked: 0,
+        message: "Bản quyền hợp lệ",
+        customer_name: name,
+        note: note,
+        sn: sn
+      };
+      
+      try {
+        await uploadFileToGitHub(sn, payload, sha, `Add/Sync device ${sn} [locked: 0]`);
+        showToast(`Kích hoạt thành công cho khách "${name}"!`, 'success');
+        closeAddModal();
+        refreshData();
+      } catch (err) {
+        showToast(`Lỗi kích hoạt: ${err.message}`, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Kích Hoạt Ngay</span>`;
+      }
+    }
+
+    // Upload file lên GitHub REST API (PUT)
+    async function uploadFileToGitHub(sn, jsonContent, sha, commitMsg) {
+      const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_PATH}/${sn}`;
+      const contentStr = JSON.stringify(jsonContent, null, 2);
+      // Encode utf-8 to base64
+      const base64Content = btoa(unescape(encodeURIComponent(contentStr)));
+      
+      const body = {
+        message: commitMsg || `Sync device ${sn}`,
+        content: base64Content
+      };
+      if (sha) {
+        body.sha = sha;
+      }
+      
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          ...getHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || res.statusText);
+      }
+      
+      return await res.json();
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`Đã sao chép: ${text}`, 'success');
+      }).catch(() => {
+        showToast('Không thể sao chép!', 'error');
+      });
+    }
+
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      const inner = document.getElementById('toast-inner');
+      const text = document.getElementById('toast-text');
+      const icon = document.getElementById('toast-icon');
+      
+      text.innerText = msg;
+      
+      if (type === 'success') {
+        inner.className = 'px-4 py-3 rounded-xl border border-emerald-500/40 bg-emerald-950/90 text-emerald-300 flex items-center gap-2.5 shadow-2xl backdrop-blur';
+        icon.className = 'fa-solid fa-circle-check text-emerald-400';
+      } else if (type === 'error') {
+        inner.className = 'px-4 py-3 rounded-xl border border-rose-500/40 bg-rose-950/90 text-rose-300 flex items-center gap-2.5 shadow-2xl backdrop-blur';
+        icon.className = 'fa-solid fa-circle-xmark text-rose-400';
+      } else {
+        inner.className = 'px-4 py-3 rounded-xl border border-cyan-500/40 bg-slate-900/90 text-cyan-300 flex items-center gap-2.5 shadow-2xl backdrop-blur';
+        icon.className = 'fa-solid fa-circle-info text-cyan-400';
+      }
+      
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
