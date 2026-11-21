@@ -1,9 +1,9 @@
 {
-  "status": false,
+  "status": true,
   "expired": false,
   "expire_date": "2027-01-01",
-  "is_locked": 1,
-  "message": "Thi\u1ebft b\u1ecb t\u1ea1m th\u1eddi b\u1ecb kh\u00f3a b\u1edfi Admin",
+  "is_locked": 0,
+  "message": "B\u1ea3n quy\u1ec1n h\u1ee3p l\u1ec7",
   "customer_name": "Kh\u00e1ch iPhone (Ch\u1edd duy\u1ec7t)",
   "note": "Litmatch iOS",
   "sn": "57a5aa26b69b4340"
