@@ -1,10 +1,10 @@
 {
   "status": true,
   "expired": false,
-  "expire_date": "2027-01-01",
+  "expire_date": "2027-01-31",
   "is_locked": 0,
-  "message": "B\u1ea3n quy\u1ec1n h\u1ee3p l\u1ec7",
-  "customer_name": "Kh\u00e1ch iPhone (Ch\u1edd duy\u1ec7t)",
+  "message": "Bản quyền hợp lệ",
+  "customer_name": "Khách iPhone (Chờ duyệt)",
   "note": "Litmatch iOS",
   "sn": "57a5aa26b69b4340"
 }
