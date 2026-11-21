@@ -92,17 +92,34 @@
       </div>
     </div>
 
-    <!-- Filter & Search Bar: CHỈ CÒN 3 BỘ LỌC (Tất cả - Hoạt động - Đã khóa) -->
-    <div class="cyber-card p-3 sm:p-4 rounded-2xl flex flex-col sm:flex-row gap-3 items-center justify-between">
-      <div class="relative w-full sm:w-80">
+    <!-- Filter & Search Bar: 3 BỘ LỌC + 2 NÚT KHÓA / MỞ KHÓA ALL -->
+    <div class="cyber-card p-3 sm:p-4 rounded-2xl flex flex-col md:flex-row gap-3 items-center justify-between">
+      <div class="relative w-full md:w-72">
         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
         <input type="text" id="search-input" oninput="filterDevices()" placeholder="Tìm theo tên khách, mã SN, ghi chú..." 
                class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
       </div>
-      <div class="flex items-center gap-2 w-full sm:w-auto">
-        <button onclick="setFilter('all')" id="filter-all" class="filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 transition">Tất cả</button>
-        <button onclick="setFilter('active')" id="filter-active" class="filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 hover:text-white transition">Hoạt động</button>
-        <button onclick="setFilter('locked')" id="filter-locked" class="filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 hover:text-white transition">Đã khóa</button>
+      <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
+        <!-- Bộ lọc 3 trạng thái -->
+        <div class="flex items-center gap-1.5 bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+          <button onclick="setFilter('all')" id="filter-all" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500 text-slate-950 transition">Tất cả</button>
+          <button onclick="setFilter('active')" id="filter-active" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">Hoạt động</button>
+          <button onclick="setFilter('locked')" id="filter-locked" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">Đã khóa</button>
+        </div>
+
+        <div class="hidden sm:block h-6 w-px bg-slate-800"></div>
+
+        <!-- Hai nút bấm Hàng Loạt: Mở Khóa All & Khóa All -->
+        <div class="flex items-center gap-2">
+          <button onclick="batchToggleLock(0)" id="btn-unlock-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40 transition flex items-center gap-1.5 shadow-lg shadow-emerald-950/20" title="Mở khóa tất cả thiết bị">
+            <i class="fa-solid fa-lock-open"></i>
+            <span>Mở Khóa ALL</span>
+          </button>
+          <button onclick="batchToggleLock(1)" id="btn-lock-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/40 transition flex items-center gap-1.5 shadow-lg shadow-rose-950/20" title="Khóa tất cả thiết bị">
+            <i class="fa-solid fa-lock"></i>
+            <span>Khóa ALL</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -476,11 +493,11 @@
       currentFilter = filter;
       document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('bg-cyan-500', 'text-slate-950');
-        btn.classList.add('bg-slate-800', 'text-slate-400');
+        btn.classList.add('text-slate-400');
       });
       const activeBtn = document.getElementById(`filter-${filter}`);
       if (activeBtn) {
-        activeBtn.classList.remove('bg-slate-800', 'text-slate-400');
+        activeBtn.classList.remove('text-slate-400');
         activeBtn.classList.add('bg-cyan-500', 'text-slate-950');
       }
       filterDevices();
@@ -506,6 +523,102 @@
       });
       
       renderDevices(filtered);
+    }
+
+    // Khóa / Mở Khóa TẤT CẢ Thiết Bị (Batch Action Hàng Loạt)
+    async function batchToggleLock(targetLockedState) {
+      const token = getStoredToken();
+      if (!token) {
+        showToast('Vui lòng cài đặt GitHub Token trước khi thao tác!', 'error');
+        openTokenModal();
+        return;
+      }
+
+      if (!allDevices || allDevices.length === 0) {
+        showToast('Danh sách thiết bị trống, không có gì để thao tác!', 'error');
+        return;
+      }
+
+      const actionName = targetLockedState === 1 ? 'Khóa' : 'Mở Khóa';
+      const confirmMsg = targetLockedState === 1 
+        ? `⚠️ Bạn có chắc chắn muốn KHÓA TẤT CẢ (${allDevices.length}) thiết bị không?` 
+        : `⚡ Bạn có chắc chắn muốn MỞ KHÓA TẤT CẢ (${allDevices.length}) thiết bị không?`;
+
+      if (!confirm(confirmMsg)) return;
+
+      // Tìm những thiết bị thực tế cần thay đổi trạng thái
+      const targets = allDevices.filter(d => {
+        const isLocked = d.is_locked === 1 || d.is_locked === '1' || d.is_locked === true;
+        const isStatusOk = d.status === true || d.status === 'true' || d.status === 1;
+        if (targetLockedState === 1) {
+          return !isLocked || isStatusOk; // Máy đang mở -> cần khóa
+        } else {
+          return isLocked || !isStatusOk; // Máy đang khóa -> cần mở
+        }
+      });
+
+      if (targets.length === 0) {
+        showToast(`Tất cả thiết bị đều đã ở trạng thái ${actionName} rồi!`, 'info');
+        return;
+      }
+
+      const btnId = targetLockedState === 1 ? 'btn-lock-all' : 'btn-unlock-all';
+      const btn = document.getElementById(btnId);
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang ${actionName} ALL...`;
+      }
+
+      showToast(`⚡ Đang thực hiện ${actionName} ALL cho ${targets.length} thiết bị...`, 'info');
+
+      // 0ms Optimistic UI: Đổi trạng thái giao diện ngay lập tức
+      targets.forEach(dev => {
+        dev.is_locked = targetLockedState;
+        dev.status = (targetLockedState === 0);
+        dev.message = (targetLockedState === 0) ? "Bản quyền hợp lệ" : "Thiết bị đã bị khóa từ xa";
+      });
+      updateStats(allDevices);
+      filterDevices();
+
+      // Đồng bộ đồng loạt lên GitHub REST API
+      let successCount = 0;
+      let failCount = 0;
+
+      await Promise.all(targets.map(async dev => {
+        const sn = dev.sn || dev._filename;
+        const updatedData = {
+          status: targetLockedState === 0,
+          is_locked: targetLockedState,
+          message: targetLockedState === 0 ? "Bản quyền hợp lệ" : "Thiết bị đã bị khóa từ xa",
+          customer_name: dev.customer_name || "Khách",
+          note: dev.note || "Litmatch iOS",
+          sn: sn
+        };
+
+        try {
+          const uploadRes = await uploadFileToGitHub(sn, updatedData, dev._sha, `Batch ${actionName} device ${sn} [locked: ${targetLockedState}]`);
+          if (uploadRes && uploadRes.content && uploadRes.content.sha) {
+            dev._sha = uploadRes.content.sha;
+          }
+          successCount++;
+        } catch (err) {
+          console.error(`Lỗi khi batch ${actionName} ${sn}:`, err);
+          failCount++;
+        }
+      }));
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+
+      if (failCount === 0) {
+        showToast(`🎉 Đã ${actionName} ALL thành công toàn bộ ${successCount} thiết bị!`, 'success');
+      } else {
+        showToast(`Đã ${actionName} ${successCount}/${targets.length} máy (Thất bại: ${failCount})`, 'error');
+        refreshData();
+      }
     }
 
     // Toggle Khóa / Mở Khóa với 0ms Optimistic UI
