@@ -2,8 +2,8 @@
   "status": true,
   "expired": false,
   "expire_date": "2026-11-22",
-  "is_locked": 0,
-  "message": "Bản quyền hợp lệ",
+  "is_locked": 1,
+  "message": "Thiết bị đã bị khóa từ xa",
   "customer_name": "Khách mới (Chờ kích hoạt)",
   "note": "Litmatch iOS",
   "sn": "8cc6cef46db148ed"
