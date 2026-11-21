@@ -217,14 +217,6 @@
           Token này giúp trang web có quyền <b class="text-cyan-400">thêm, sửa, khóa, mở khóa</b> trực tiếp vào repo <code class="text-slate-200 bg-slate-800 px-1.5 py-0.5 rounded font-mono">dangha995/rom-license</code>.
         </p>
 
-        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-1">
-          <p class="font-semibold text-slate-300">Cách lấy Token trong 30 giây:</p>
-          <p>1. Mở GitHub ➔ Vào <b>Settings</b> ➔ <b>Developer Settings</b></p>
-          <p>2. Chọn <b>Personal Access Tokens (classic)</b> ➔ <b>Generate new token</b></p>
-          <p>3. Đặt tên (vd: "LicenseWeb") và tích chọn quyền <span class="text-cyan-400 font-mono font-semibold">repo</span></p>
-          <p>4. Bấm Generate và copy mã token (dạng <code class="text-slate-300">ghp_xxxx</code>) dán vào đây.</p>
-        </div>
-
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">GitHub Personal Access Token</label>
           <input type="password" id="input-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
@@ -255,10 +247,9 @@
     let allDevices = [];
     let currentFilter = 'all';
 
-    // Khởi động
     document.addEventListener('DOMContentLoaded', () => {
       checkTokenState();
-      setExpireDays(30); // Default 30 days
+      setExpireDays(30);
       refreshData();
     });
 
@@ -323,7 +314,7 @@
           showToast('Đã dán từ clipboard!', 'info');
         }
       } catch (e) {
-        showToast('Vui lòng cấp quyền clipboard hoặc dán thủ công.', 'error');
+        showToast('Vui lòng dán thủ công.', 'error');
       }
     }
 
@@ -347,7 +338,7 @@
       return headers;
     }
 
-    // Tải danh sách thiết bị từ GitHub API
+    // Tải danh sách thiết bị trực tiếp từ GitHub API (0ms Cache, không dùng link raw)
     async function refreshData() {
       const icon = document.getElementById('refresh-icon');
       icon.classList.add('fa-spin');
@@ -359,30 +350,36 @@
         const res = await fetch(url, { headers: getHeaders() });
         
         if (res.status === 404) {
-          container.innerHTML = `<div class="p-8 text-center text-slate-400">Thư mục devices chưa có file nào. Hãy bấm "Thêm Khách" để tạo thiết bị đầu tiên!</div>`;
+          container.innerHTML = `<div class="p-8 text-center text-slate-400">Thư mục devices chưa có file nào.</div>`;
           updateStats([]);
           return;
         }
         
         if (!res.ok) {
-          throw new Error(`GitHub API phản hồi: ${res.status} ${res.statusText}`);
+          throw new Error(`GitHub API: ${res.status} ${res.statusText}`);
         }
         
         const files = await res.json();
         const deviceFiles = files.filter(f => f.type === 'file');
         
-        // Tải nội dung từng file song song
+        // Gọi thẳng GitHub API contents từng file (nhận base64 content trực tiếp từ Git HEAD)
         const fetchPromises = deviceFiles.map(async (file) => {
           try {
-            const rawRes = await fetch(file.download_url + `?t=${Date.now()}`);
-            if (!rawRes.ok) return null;
-            const json = await rawRes.json();
+            const fileApiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_PATH}/${file.name}?t=${Date.now()}`;
+            const fileRes = await fetch(fileApiUrl, { headers: getHeaders() });
+            if (!fileRes.ok) return null;
+            const fileData = await fileRes.json();
+            if (!fileData.content) return null;
+            const cleanB64 = fileData.content.replace(/\n/g, '');
+            const decodedJsonStr = decodeURIComponent(escape(atob(cleanB64)));
+            const json = JSON.parse(decodedJsonStr);
             return {
               ...json,
-              _sha: file.sha,
+              _sha: fileData.sha,
               _filename: file.name
             };
           } catch (e) {
+            console.error('Error fetching file:', file.name, e);
             return null;
           }
         });
@@ -392,14 +389,12 @@
         
         updateStats(allDevices);
         renderDevices(allDevices);
-        showToast('Đồng bộ dữ liệu thành công!', 'success');
       } catch (err) {
         console.error(err);
         container.innerHTML = `
           <div class="cyber-card p-6 rounded-xl border border-rose-500/30 text-center space-y-3">
             <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-400"></i>
             <p class="text-sm text-slate-200 font-semibold">${err.message}</p>
-            <p class="text-xs text-slate-400">Nếu bạn bị giới hạn API hoặc repo riêng tư, hãy bấm "Cài Token" ở góc trên để nhập GitHub Token.</p>
             <button onclick="openTokenModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/40 rounded-lg text-xs font-semibold">Cài GitHub Token ngay</button>
           </div>
         `;
@@ -443,7 +438,6 @@
           <div class="cyber-card p-12 text-center rounded-xl border border-dashed border-slate-700">
             <i class="fa-regular fa-folder-open text-4xl text-slate-600 mb-3"></i>
             <p class="text-sm font-semibold text-slate-300">Không tìm thấy thiết bị nào</p>
-            <p class="text-xs text-slate-500 mt-1">Bấm "Thêm Khách" để thêm máy thuê mới vào hệ thống.</p>
           </div>
         `;
         return;
@@ -454,7 +448,7 @@
       container.innerHTML = devices.map(d => {
         const sn = d.sn || d._filename;
         const name = d.customer_name || 'Khách chưa đặt tên';
-        const note = d.note || 'Litmatch AutoChest';
+        const note = d.note || 'Litmatch iOS';
         const expDate = d.expire_date || 'Không giới hạn';
         
         const isLocked = d.is_locked === 1 || d.is_locked === '1' || d.is_locked === true;
@@ -470,7 +464,6 @@
           statusBadge = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-[10px]"></i> HOẠT ĐỘNG</span>`;
         }
         
-        // Tính số ngày còn lại
         let daysLeftText = '';
         if (d.expire_date) {
           const diffTime = new Date(d.expire_date) - new Date(today);
@@ -505,7 +498,7 @@
               </div>
             </div>
 
-            <!-- Action Buttons -->
+            <!-- Action Buttons: Tự động đổi nút ngay lập tức -->
             <div class="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
               ${isLocked 
                 ? `<button onclick="toggleLock('${sn}', 0)" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40 transition flex items-center gap-1.5">
@@ -566,7 +559,7 @@
       renderDevices(filtered);
     }
 
-    // Toggle Khóa / Mở Khóa thiết bị
+    // Toggle Khóa / Mở Khóa với Optimistic UI (đổi nút ngay trong 0ms)
     async function toggleLock(sn, targetLockedState) {
       const token = getStoredToken();
       if (!token) {
@@ -581,6 +574,18 @@
       const actionName = targetLockedState === 1 ? 'Khóa' : 'Mở Khóa';
       showToast(`Đang ${actionName} thiết bị ${sn}...`, 'info');
       
+      // 1. CẬP NHẬT TRẠNG THÁI NGAY TRÊN MÀN HÌNH (0ms)
+      dev.is_locked = targetLockedState;
+      if (targetLockedState === 0) {
+        dev.status = true;
+        dev.expired = false;
+        dev.message = "Bản quyền hợp lệ";
+      } else {
+        dev.message = "Thiết bị đã bị khóa từ xa";
+      }
+      updateStats(allDevices);
+      renderDevices(allDevices);
+      
       const updatedData = {
         status: targetLockedState === 1 ? dev.status : true,
         expired: targetLockedState === 1 ? dev.expired : false,
@@ -588,20 +593,23 @@
         is_locked: targetLockedState,
         message: targetLockedState === 1 ? "Thiết bị đã bị khóa từ xa" : "Bản quyền hợp lệ",
         customer_name: dev.customer_name || "Khách",
-        note: dev.note || "Litmatch AutoChest",
+        note: dev.note || "Litmatch iOS",
         sn: sn
       };
       
       try {
-        await uploadFileToGitHub(sn, updatedData, dev._sha, `Sync device ${sn} [locked: ${targetLockedState}]`);
+        const uploadRes = await uploadFileToGitHub(sn, updatedData, dev._sha, `Sync device ${sn} [locked: ${targetLockedState}]`);
+        if (uploadRes && uploadRes.content && uploadRes.content.sha) {
+          dev._sha = uploadRes.content.sha;
+        }
         showToast(`Đã ${actionName} thành công thiết bị ${sn}!`, 'success');
-        refreshData();
       } catch (err) {
         showToast(`Lỗi khi ${actionName}: ${err.message}`, 'error');
+        refreshData();
       }
     }
 
-    // Gia hạn thêm ngày
+    // Gia hạn thêm ngày với Optimistic UI
     async function extendDays(sn, days) {
       const token = getStoredToken();
       if (!token) {
@@ -621,6 +629,14 @@
       baseDate.setDate(baseDate.getDate() + days);
       const newExpireStr = baseDate.toISOString().split('T')[0];
       
+      // Cập nhật UI ngay
+      dev.expire_date = newExpireStr;
+      dev.is_locked = 0;
+      dev.status = true;
+      dev.expired = false;
+      updateStats(allDevices);
+      renderDevices(allDevices);
+      
       const updatedData = {
         ...dev,
         status: true,
@@ -635,15 +651,18 @@
       showToast(`Đang gia hạn ${sn} đến ${newExpireStr}...`, 'info');
       
       try {
-        await uploadFileToGitHub(sn, updatedData, dev._sha, `Extend device ${sn} to ${newExpireStr}`);
-        showToast(`Đã gia hạn thành công đến ngày ${newExpireStr}!`, 'success');
-        refreshData();
+        const uploadRes = await uploadFileToGitHub(sn, updatedData, dev._sha, `Extend device ${sn} to ${newExpireStr}`);
+        if (uploadRes && uploadRes.content && uploadRes.content.sha) {
+          dev._sha = uploadRes.content.sha;
+        }
+        showToast(`Đã gia hạn thành công đến ${newExpireStr}!`, 'success');
       } catch (err) {
         showToast(`Lỗi gia hạn: ${err.message}`, 'error');
+        refreshData();
       }
     }
 
-    // Xóa thiết bị
+    // Xóa thiết bị với Optimistic UI
     async function deleteDevice(sn) {
       const token = getStoredToken();
       if (!token) {
@@ -658,6 +677,11 @@
       
       const dev = allDevices.find(d => (d.sn || d._filename) === sn);
       if (!dev) return;
+      
+      // Xóa ngay trên màn hình (0ms)
+      allDevices = allDevices.filter(d => (d.sn || d._filename) !== sn);
+      updateStats(allDevices);
+      renderDevices(allDevices);
       
       showToast(`Đang xóa thiết bị ${sn}...`, 'info');
       
@@ -681,9 +705,9 @@
         }
         
         showToast(`Đã xóa thiết bị ${sn} thành công!`, 'success');
-        refreshData();
       } catch (err) {
         showToast(`Lỗi khi xóa: ${err.message}`, 'error');
+        refreshData();
       }
     }
 
@@ -693,14 +717,14 @@
       
       const token = getStoredToken();
       if (!token) {
-        showToast('Vui lòng cài đặt GitHub Token trước khi thêm khách!', 'error');
+        showToast('Vui lòng cài đặt GitHub Token trước!', 'error');
         openTokenModal();
         return;
       }
       
       const sn = document.getElementById('add-sn').value.trim();
       const name = document.getElementById('add-name').value.trim() || 'Khách mới';
-      const note = document.getElementById('add-note').value.trim() || 'Litmatch AutoChest';
+      const note = document.getElementById('add-note').value.trim() || 'Litmatch iOS';
       const expire = document.getElementById('add-expire').value;
       
       if (!sn) {
@@ -712,7 +736,6 @@
       submitBtn.disabled = true;
       submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang kích hoạt...`;
       
-      // Kiểm tra xem thiết bị đã tồn tại chưa để lấy SHA
       const existing = allDevices.find(d => (d.sn || d._filename) === sn);
       const sha = existing ? existing._sha : undefined;
       
@@ -728,7 +751,7 @@
       };
       
       try {
-        await uploadFileToGitHub(sn, payload, sha, `Add/Sync device ${sn} [locked: 0]`);
+        const res = await uploadFileToGitHub(sn, payload, sha, `Add/Sync device ${sn} [locked: 0]`);
         showToast(`Kích hoạt thành công cho khách "${name}"!`, 'success');
         closeAddModal();
         refreshData();
@@ -740,11 +763,9 @@
       }
     }
 
-    // Upload file lên GitHub REST API (PUT)
     async function uploadFileToGitHub(sn, jsonContent, sha, commitMsg) {
       const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DEVICES_PATH}/${sn}`;
       const contentStr = JSON.stringify(jsonContent, null, 2);
-      // Encode utf-8 to base64
       const base64Content = btoa(unescape(encodeURIComponent(contentStr)));
       
       const body = {
@@ -805,7 +826,7 @@
       setTimeout(() => {
         toast.classList.remove('translate-y-0', 'opacity-100');
         toast.classList.add('translate-y-20', 'opacity-0');
-      }, 3500);
+      }, 3000);
     }
 
     function escapeHtml(str) {
