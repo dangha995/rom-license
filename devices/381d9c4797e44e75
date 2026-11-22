@@ -1,8 +1,8 @@
 {
-  "status" : true,
-  "message" : "Đang chờ Admin mở khóa...",
-  "customer_name" : "Khách iPhone (Chờ mở)",
-  "is_locked" : 1,
-  "note" : "Litmatch iOS",
-  "sn" : "381d9c4797e44e75"
+  "status": true,
+  "is_locked": 0,
+  "message": "Bản quyền hợp lệ",
+  "customer_name": "Khách iPhone (Chờ mở)",
+  "note": "Litmatch iOS",
+  "sn": "381d9c4797e44e75"
 }
