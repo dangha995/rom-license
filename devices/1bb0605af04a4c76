@@ -1,7 +1,7 @@
 {
-  "status": true,
-  "is_locked": 0,
-  "message": "Bản quyền hợp lệ",
+  "status": false,
+  "is_locked": 1,
+  "message": "Thiết bị đã bị khóa từ xa",
   "customer_name": "Khách iPhone (Chờ mở)",
   "note": "Litmatch iOS",
   "sn": "1bb0605af04a4c76"
